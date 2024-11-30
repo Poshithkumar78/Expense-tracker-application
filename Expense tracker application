@@ -1,0 +1,213 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+
+public class Main {
+
+    // Main components
+    private JFrame frame;
+    private JTable table;
+    private DefaultTableModel tableModel;
+    private JLabel incomeLabel, savingsLabel;
+    private double totalIncome = 0.0;
+
+    public Main() {
+        // Initialize the main frame
+        frame = new JFrame("Expense Tracker");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setLayout(new BorderLayout());
+
+        // Table setup
+        String[] columns = {"Date", "Category", "Description", "Amount"};
+        tableModel = new DefaultTableModel(columns, 0);
+        table = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        // Summary panel (Income and Savings)
+        JPanel summaryPanel = new JPanel(new GridLayout(1, 3, 10, 10));
+        incomeLabel = new JLabel("Total Income: $0.00");
+        savingsLabel = new JLabel("Savings: $0.00");
+        JButton updateIncomeButton = new JButton("Update Income");
+
+        updateIncomeButton.addActionListener(e -> showUpdateIncomeDialog());
+        summaryPanel.add(incomeLabel);
+        summaryPanel.add(savingsLabel);
+        summaryPanel.add(updateIncomeButton);
+
+        // Buttons panel
+        JPanel buttonPanel = new JPanel();
+        JButton addButton = new JButton("Add Expense");
+        JButton deleteButton = new JButton("Delete Expense");
+        JButton exitButton = new JButton("Exit");
+
+        buttonPanel.add(addButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(exitButton);
+
+        // Add components to the frame
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(summaryPanel, BorderLayout.NORTH);
+        frame.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Add button actions
+        addButton.addActionListener(e -> showAddExpenseDialog());
+        deleteButton.addActionListener(e -> deleteSelectedExpense());
+        exitButton.addActionListener(e -> System.exit(0));
+
+        // Display the frame
+        frame.setVisible(true);
+    }
+
+    private void showAddExpenseDialog() {
+        // Create a dialog for adding an expense
+        JDialog dialog = new JDialog(frame, "Add Expense", true);
+        dialog.setSize(400, 300);
+        dialog.setLayout(new GridLayout(5, 2, 10, 10));
+
+        // Input fields
+        JLabel dateLabel = new JLabel("Date (YYYY-MM-DD):");
+        JTextField dateField = new JTextField();
+        JLabel categoryLabel = new JLabel("Category:");
+        JTextField categoryField = new JTextField();
+        JLabel descriptionLabel = new JLabel("Description:");
+        JTextField descriptionField = new JTextField();
+        JLabel amountLabel = new JLabel("Amount:");
+        JTextField amountField = new JTextField();
+
+        // Buttons
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        // Add components to the dialog
+        dialog.add(dateLabel);
+        dialog.add(dateField);
+        dialog.add(categoryLabel);
+        dialog.add(categoryField);
+        dialog.add(descriptionLabel);
+        dialog.add(descriptionField);
+        dialog.add(amountLabel);
+        dialog.add(amountField);
+        dialog.add(saveButton);
+        dialog.add(cancelButton);
+
+        // Save button action
+        saveButton.addActionListener(e -> {
+            String date = dateField.getText();
+            String category = categoryField.getText();
+            String description = descriptionField.getText();
+            String amountText = amountField.getText();
+
+            // Validate input
+            if (date.isEmpty() || category.isEmpty() || description.isEmpty() || amountText.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "All fields are required.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double amount = Double.parseDouble(amountText);
+                if (amount < 0) {
+                    JOptionPane.showMessageDialog(dialog, "Amount cannot be negative.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Add expense to the table
+                tableModel.addRow(new Object[]{date, category, description, amount});
+                updateSavings();
+                JOptionPane.showMessageDialog(dialog, "Expense added successfully!");
+                dialog.dispose();
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Invalid amount. Please enter a valid number.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Cancel button action
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        // Show the dialog
+        dialog.setVisible(true);
+    }
+
+    private void showUpdateIncomeDialog() {
+        // Create a dialog for updating income
+        JDialog dialog = new JDialog(frame, "Update Income", true);
+        dialog.setSize(300, 200);
+        dialog.setLayout(new GridLayout(2, 2, 10, 10));
+
+        // Input fields
+        JLabel incomeLabel = new JLabel("Enter new income:");
+        JTextField incomeField = new JTextField();
+
+        // Buttons
+        JButton saveButton = new JButton("Save");
+        JButton cancelButton = new JButton("Cancel");
+
+        // Add components to the dialog
+        dialog.add(incomeLabel);
+        dialog.add(incomeField);
+        dialog.add(saveButton);
+        dialog.add(cancelButton);
+
+        // Save button action
+        saveButton.addActionListener(e -> {
+            String incomeText = incomeField.getText();
+
+            try {
+                double income = Double.parseDouble(incomeText);
+                if (income < 0) {
+                    JOptionPane.showMessageDialog(dialog, "Income cannot be negative.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                totalIncome = income;
+                updateSavings();
+                JOptionPane.showMessageDialog(dialog, "Income updated successfully!");
+                dialog.dispose();
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Invalid income. Please enter a valid number.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Cancel button action
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        // Show the dialog
+        dialog.setVisible(true);
+    }
+
+    private void deleteSelectedExpense() {
+        // Check if a row is selected
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(frame, "Please select an expense to delete.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Confirm deletion
+        int confirm = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete this expense?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            tableModel.removeRow(selectedRow);
+            updateSavings();
+            JOptionPane.showMessageDialog(frame, "Expense deleted successfully!");
+        }
+    }
+
+    private void updateSavings() {
+        // Calculate total expenses
+        double totalExpenses = 0.0;
+        for (int i = 0; i < tableModel.getRowCount(); i++) {
+            totalExpenses += (double) tableModel.getValueAt(i, 3);
+        }
+
+        // Update savings and labels
+        double savings = totalIncome - totalExpenses;
+        incomeLabel.setText(String.format("Total Income: $%.2f", totalIncome));
+        savingsLabel.setText(String.format("Savings: $%.2f", savings));
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(Main::new);
+    }
+}
